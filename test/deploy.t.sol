@@ -2,10 +2,16 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import "src/core/DaoRegistry.sol";
+import "src/tribute/core/DaoRegistry.sol";
 
 contract DeployProcess is Test {
     DaoRegistry public dao;
+
+    struct Proposal {
+        bytes4 slot;
+        address adapterAddr;
+        address votingContract;
+    }
 
     address public DEPLOYER = address(401);
     address public DAO_OWNER = address(501);
@@ -44,6 +50,18 @@ contract DeployProcess is Test {
         // view
         emit log_address(address(dao));
 
-        emit log_bytes32(bytes4(keccak256("life")));
+        bytes4 slot = bytes4(keccak256("adapter"));
+
+        Proposal memory proposal = Proposal(slot, address(34), address(56));
+        bytes28 proposalId = bytes28(keccak256(abi.encode(proposal)));
+
+        // bytes28 proposalId = bytes28(keccak256("proposal"));
+        bytes32 concated = bytes32(bytes.concat(slot, proposalId));
+
+        emit log_bytes32(slot);
+        emit log_bytes32(proposalId);
+        emit log_bytes32(concated);
+        emit log_bytes32(bytes4(concated));
+        emit log_bytes32(concated << 32);
     }
 }
