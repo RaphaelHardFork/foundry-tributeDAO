@@ -15,6 +15,9 @@ abstract contract Adapters is IAdapters {
     address internal immutable _core;
     bytes4 internal immutable _slot;
 
+    // OPEN PROPOSAL? => don't replace
+    // PAUSE PROPOSALS SUBMISSION
+
     modifier onlyCore() {
         require(msg.sender == _core, "Adapters: only callable by Core");
         _;

@@ -41,7 +41,7 @@ contract Managing is Adapters {
         );
     }
 
-    function processProposal(bytes32 proposalId) external onlyCore {
+    function processProposal(bytes32 proposalId) external override onlyCore {
         Proposal memory p = proposals[bytes28(proposalId << 32)];
         IDaoCore(_core).replaceAdapter(p.slot, p.adapterAddr);
         delete proposals[bytes28(proposalId << 32)];
