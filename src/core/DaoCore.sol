@@ -2,24 +2,29 @@
 
 pragma solidity ^0.8.16;
 
+import "openzeppelin-contracts/access/AccessControl.sol";
+
 import "../helpers/Slot.sol";
 import "../adapters/Adapters.sol";
+import "./IDaoCore.sol";
 
 /**
  * @notice Main contract, keep states of the DAO
  */
 
-contract DaoCore {
+contract DaoCore is IDaoCore {
     event AdapterChanged(
         bytes4 indexed slot,
         address oldAdapter,
         address newAdapter
     );
 
+    event ExtensionChanged(bytes4 indexed slot, address extensionAddr);
+
     event MemberStatusChanged(
         address indexed member,
-        MemberStatus indexed oldStatus,
-        MemberStatus indexed newStatus
+        bytes4 indexed roles,
+        bool indexed actualValue
     );
 
     event ProposalSubmitted(
@@ -29,14 +34,6 @@ contract DaoCore {
         bytes32 proposalId
     );
 
-    enum MemberStatus {
-        UNKNOWN,
-        IN_PROCESS,
-        EXISTS,
-        EXITED,
-        JAILED
-    }
-
     enum ProposalStatus {
         EXISTS,
         SUSPENDED,
@@ -44,13 +41,15 @@ contract DaoCore {
         REJECTED
     }
 
-    struct Member {
-        MemberStatus status;
-    }
-
     struct Adapter {
         bytes4 slot;
         address adapterAddr;
+    }
+
+    struct Extension {
+        bytes4 slot;
+        bool active;
+        address extensionAddr;
     }
 
     struct Proposal {
@@ -61,12 +60,14 @@ contract DaoCore {
         ProposalStatus status;
     }
 
-    /// @notice The map to track all members of the DAO with their existing flags
-    mapping(address => Member) public members;
+    /// @notice The map to track all members of the DAO with their roles or credits
+    mapping(address => mapping(bytes4 => uint256)) public members;
     uint256 public membersCount;
 
     /// @notice The map that keeps track of all adapters registered in the DAO: sha3(adapterId) => adapterAddress
     mapping(bytes4 => Adapter) public adapters;
+
+    mapping(bytes4 => Extension) public extensions; // + adapters = JUST ENTRIES ??
 
     /// @notice The map that keeps track of all proposasls submitted to the DAO
     mapping(bytes32 => Proposal) public proposals;
@@ -98,26 +99,46 @@ contract DaoCore {
         emit AdapterChanged(slot, oldAdapter, adapterAddr);
     }
 
-    function changeMemberStatus(address account, MemberStatus status)
+    function addExtension(bytes4 slot, address extensionAddr)
         external
-        onlyAdapter(Slot.ONBOARDING)
+        onlyAdapter(Slot.MANAGING)
     {
-        require(account != address(0), "Core: zero address used");
-        MemberStatus oldStatus = members[account].status;
+        require(slot != Slot.EMPTY, "Core: empty slot");
+        Extension memory e = extensions[slot];
+        require(!e.active, "Core: cannot replace extension");
 
-        // update members count
-        if (oldStatus == MemberStatus.IN_PROCESS) {
+        e.slot = slot;
+        e.extensionAddr = extensionAddr;
+        e.active = true;
+        extensions[slot] = e;
+
+        emit ExtensionChanged(slot, extensionAddr);
+    }
+
+    function removeExtension(bytes4 slot) external onlyAdapter(Slot.MANAGING) {
+        Extension memory e = extensions[slot];
+        require(e.active, "Core: inactive extension");
+
+        delete extensions[slot];
+        emit ExtensionChanged(slot, e.extensionAddr);
+    }
+
+    function changeMemberStatus(
+        address account,
+        bytes4 roles,
+        bool value
+    ) external onlyAdapter(Slot.ONBOARDING) {
+        require(account != address(0), "Core: zero address used");
+        require(members[account][roles] != value, "Core: role not changing");
+
+        if (roles == Slot.USER_EXISTS) {
             unchecked {
-                membersCount++;
-            }
-        } else if (status == MemberStatus.EXITED) {
-            unchecked {
-                membersCount--;
+                value ? ++membersCount : --membersCount;
             }
         }
 
-        members[account].status = status;
-        emit MemberStatusChanged(account, oldStatus, status);
+        members[account][roles] = value;
+        emit MemberStatusChanged(account, roles, value);
     }
 
     function submitProposal(
@@ -152,7 +173,11 @@ contract DaoCore {
         IAdapters(adapterAddr).processProposal(proposalId);
     }
 
-    function isMember(address account) external view returns (bool) {
-        return members[account].status == MemberStatus.EXISTS;
+    function hasRole(address account, bytes4 role)
+        external
+        view
+        returns (bool)
+    {
+        return members[account][role];
     }
 }

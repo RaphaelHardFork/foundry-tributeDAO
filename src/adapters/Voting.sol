@@ -8,16 +8,10 @@ import "./Adapters.sol";
 
 contract Voting is Adapters {
     event VoteSessionOpened(
-        bytes4 indexed slot,
-        bytes4 indexed voteParams,
-        bytes32 proposalId,
-        uint64 startTime,
-        uint64 endTime
+        bytes4 indexed slot, bytes4 indexed voteParams, bytes32 proposalId, uint64 startTime, uint64 endTime
     );
 
-    enum VoteType {
-        UNANIMITY
-    }
+    enum VoteType {UNANIMITY}
 
     struct Vote {
         uint64 startTime;
@@ -52,21 +46,12 @@ contract Voting is Adapters {
         vote.startTime = startTime;
         vote.voteType = vp.voteType;
 
-        emit VoteSessionOpened(
-            bytes4(proposalId),
-            voteConfig,
-            proposalId,
-            startTime,
-            startTime + vp.votingPeriod
-        );
+        emit VoteSessionOpened(bytes4(proposalId), voteConfig, proposalId, startTime, startTime + vp.votingPeriod);
     }
 
     function submitVote(bytes32 proposalId, uint256 vote) external {
         // ONLY MEMBER
-        require(
-            votes[proposalId][msg.sender] == 0,
-            "Voting: vote already submitted"
-        );
+        require(votes[proposalId][msg.sender] == 0, "Voting: vote already submitted");
     }
 
     function processProposal(bytes32) external pure override {

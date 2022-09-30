@@ -22,11 +22,7 @@ contract Managing is Adapters {
 
     constructor(address core) Adapters(core, Slot.MANAGING) {}
 
-    function submitProposal(
-        bytes4 slot,
-        address adapterAddr,
-        address votingContract
-    ) external {
+    function submitProposal(bytes4 slot, address adapterAddr, address votingContract) external {
         // check member
         // check votingContract
 
@@ -34,11 +30,7 @@ contract Managing is Adapters {
         bytes28 proposalId = bytes28(keccak256(abi.encode(proposal)));
 
         // store in the core
-        IDaoCore(_core).submitProposal(
-            bytes32(bytes.concat(_slot, proposalId)),
-            msg.sender,
-            votingContract
-        );
+        IDaoCore(_core).submitProposal(bytes32(bytes.concat(_slot, proposalId)), msg.sender, votingContract);
     }
 
     function processProposal(bytes32 proposalId) external override onlyCore {

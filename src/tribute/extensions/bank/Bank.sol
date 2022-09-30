@@ -11,23 +11,23 @@ import "openzeppelin-contracts/token/ERC20/utils/SafeERC20.sol";
 import "openzeppelin-contracts/utils/introspection/ERC165.sol";
 
 /**
-MIT License
-Copyright (c) 2020 Openlaw
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+ * MIT License
+ * Copyright (c) 2020 Openlaw
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
  */
 
 contract BankExtension is IExtension, ERC165 {
@@ -59,12 +59,7 @@ contract BankExtension is IExtension, ERC165 {
 
     event Withdraw(address account, address tokenAddr, uint160 amount);
 
-    event WithdrawTo(
-        address accountFrom,
-        address accountTo,
-        address tokenAddr,
-        uint160 amount
-    );
+    event WithdrawTo(address accountFrom, address accountTo, address tokenAddr, uint160 amount);
 
     /*
      * STRUCTURES
@@ -82,8 +77,7 @@ contract BankExtension is IExtension, ERC165 {
     mapping(address => bool) public availableTokens;
     mapping(address => bool) public availableInternalTokens;
     // tokenAddress => memberAddress => checkpointNum => Checkpoint
-    mapping(address => mapping(address => mapping(uint32 => Checkpoint)))
-        public checkpoints;
+    mapping(address => mapping(address => mapping(uint32 => Checkpoint))) public checkpoints;
     // tokenAddress => memberAddress => numCheckpoints
     mapping(address => mapping(address => uint32)) public numCheckpoints;
 
@@ -93,16 +87,12 @@ contract BankExtension is IExtension, ERC165 {
     // slither-disable-next-line calls-loop
     modifier hasExtensionAccess(DaoRegistry _dao, AclFlag flag) {
         require(
-            dao == _dao &&
-                (address(this) == msg.sender ||
-                    address(dao) == msg.sender ||
-                    !initialized ||
-                    DaoHelper.isInCreationModeAndHasAccess(dao) ||
-                    dao.hasAdapterAccessToExtension(
-                        msg.sender,
-                        address(this),
-                        uint8(flag)
-                    )),
+            dao == _dao
+                && (
+                    address(this) == msg.sender || address(dao) == msg.sender || !initialized
+                        || DaoHelper.isInCreationModeAndHasAccess(dao)
+                        || dao.hasAdapterAccessToExtension(msg.sender, address(this), uint8(flag))
+                ),
             "bank::accessDenied"
         );
         _;
@@ -127,12 +117,7 @@ contract BankExtension is IExtension, ERC165 {
         uint256 nbMembers = _dao.getNbMembers();
         for (uint256 i = 0; i < nbMembers; i++) {
             //slither-disable-next-line calls-loop
-            addToBalance(
-                _dao,
-                _dao.getMemberAddress(i),
-                DaoHelper.MEMBER_COUNT,
-                1
-            );
+            addToBalance(_dao, _dao.getMemberAddress(i), DaoHelper.MEMBER_COUNT, 1);
         }
 
         _createNewAmountCheckpoint(creator, DaoHelper.UNITS, 1);
@@ -140,16 +125,11 @@ contract BankExtension is IExtension, ERC165 {
         initialized = true;
     }
 
-    function withdraw(
-        DaoRegistry _dao,
-        address payable member,
-        address tokenAddr,
-        uint256 amount
-    ) external hasExtensionAccess(_dao, AclFlag.WITHDRAW) {
-        require(
-            balanceOf(member, tokenAddr) >= amount,
-            "bank::withdraw::not enough funds"
-        );
+    function withdraw(DaoRegistry _dao, address payable member, address tokenAddr, uint256 amount)
+        external
+        hasExtensionAccess(_dao, AclFlag.WITHDRAW)
+    {
+        require(balanceOf(member, tokenAddr) >= amount, "bank::withdraw::not enough funds");
         subtractFromBalance(_dao, member, tokenAddr, amount);
         if (tokenAddr == DaoHelper.ETH_TOKEN) {
             member.sendValue(amount);
@@ -168,10 +148,7 @@ contract BankExtension is IExtension, ERC165 {
         address tokenAddr,
         uint256 amount
     ) external hasExtensionAccess(_dao, AclFlag.WITHDRAW) {
-        require(
-            balanceOf(memberFrom, tokenAddr) >= amount,
-            "bank::withdraw::not enough funds"
-        );
+        require(balanceOf(memberFrom, tokenAddr) >= amount, "bank::withdraw::not enough funds");
         subtractFromBalance(_dao, memberFrom, tokenAddr, amount);
         if (tokenAddr == DaoHelper.ETH_TOKEN) {
             memberTo.sendValue(amount);
@@ -205,10 +182,7 @@ contract BankExtension is IExtension, ERC165 {
      */
     function setMaxExternalTokens(uint8 maxTokens) external {
         require(!initialized, "already initialized");
-        require(
-            maxTokens > 0 && maxTokens <= DaoHelper.MAX_TOKENS_GUILD_BANK,
-            "maxTokens should be (0,200]"
-        );
+        require(maxTokens > 0 && maxTokens <= DaoHelper.MAX_TOKENS_GUILD_BANK, "maxTokens should be (0,200]");
         maxExternalTokens = maxTokens;
     }
 
@@ -227,10 +201,7 @@ contract BankExtension is IExtension, ERC165 {
     {
         require(DaoHelper.isNotReservedAddress(token), "reservedToken");
         require(!availableInternalTokens[token], "internalToken");
-        require(
-            tokens.length <= maxExternalTokens,
-            "exceeds the maximum tokens allowed"
-        );
+        require(tokens.length <= maxExternalTokens, "exceeds the maximum tokens allowed");
 
         if (!availableTokens[token]) {
             availableTokens[token] = true;
@@ -256,10 +227,7 @@ contract BankExtension is IExtension, ERC165 {
         }
     }
 
-    function updateToken(DaoRegistry _dao, address tokenAddr)
-        external
-        hasExtensionAccess(_dao, AclFlag.UPDATE_TOKEN)
-    {
+    function updateToken(DaoRegistry _dao, address tokenAddr) external hasExtensionAccess(_dao, AclFlag.UPDATE_TOKEN) {
         require(isTokenAllowed(tokenAddr), "token not allowed");
         uint256 totalBalance = balanceOf(DaoHelper.TOTAL, tokenAddr);
 
@@ -273,29 +241,14 @@ contract BankExtension is IExtension, ERC165 {
         }
 
         if (totalBalance < realBalance) {
-            addToBalance(
-                _dao,
-                DaoHelper.GUILD,
-                tokenAddr,
-                realBalance - totalBalance
-            );
+            addToBalance(_dao, DaoHelper.GUILD, tokenAddr, realBalance - totalBalance);
         } else if (totalBalance > realBalance) {
             uint256 tokensToRemove = totalBalance - realBalance;
             uint256 guildBalance = balanceOf(DaoHelper.GUILD, tokenAddr);
             if (guildBalance > tokensToRemove) {
-                subtractFromBalance(
-                    _dao,
-                    DaoHelper.GUILD,
-                    tokenAddr,
-                    tokensToRemove
-                );
+                subtractFromBalance(_dao, DaoHelper.GUILD, tokenAddr, tokensToRemove);
             } else {
-                subtractFromBalance(
-                    _dao,
-                    DaoHelper.GUILD,
-                    tokenAddr,
-                    guildBalance
-                );
+                subtractFromBalance(_dao, DaoHelper.GUILD, tokenAddr, guildBalance);
             }
         }
     }
@@ -345,11 +298,7 @@ contract BankExtension is IExtension, ERC165 {
         return internalTokens.length;
     }
 
-    function addToBalance(
-        address,
-        address,
-        uint256
-    ) external payable {
+    function addToBalance(address, address, uint256) external payable {
         revert("not implemented");
     }
 
@@ -359,16 +308,12 @@ contract BankExtension is IExtension, ERC165 {
      * @param token The token to update
      * @param amount The new balance
      */
-    function addToBalance(
-        DaoRegistry _dao,
-        address member,
-        address token,
-        uint256 amount
-    ) public payable hasExtensionAccess(_dao, AclFlag.ADD_TO_BALANCE) {
-        require(
-            availableTokens[token] || availableInternalTokens[token],
-            "unknown token address"
-        );
+    function addToBalance(DaoRegistry _dao, address member, address token, uint256 amount)
+        public
+        payable
+        hasExtensionAccess(_dao, AclFlag.ADD_TO_BALANCE)
+    {
+        require(availableTokens[token] || availableInternalTokens[token], "unknown token address");
         uint256 newAmount = balanceOf(member, token) + amount;
         uint256 newTotalAmount = balanceOf(DaoHelper.TOTAL, token) + amount;
 
@@ -382,12 +327,10 @@ contract BankExtension is IExtension, ERC165 {
      * @param token The token to update
      * @param amount The new balance
      */
-    function subtractFromBalance(
-        DaoRegistry _dao,
-        address member,
-        address token,
-        uint256 amount
-    ) public hasExtensionAccess(_dao, AclFlag.SUB_FROM_BALANCE) {
+    function subtractFromBalance(DaoRegistry _dao, address member, address token, uint256 amount)
+        public
+        hasExtensionAccess(_dao, AclFlag.SUB_FROM_BALANCE)
+    {
         uint256 newAmount = balanceOf(member, token) - amount;
         uint256 newTotalAmount = balanceOf(DaoHelper.TOTAL, token) - amount;
 
@@ -395,20 +338,11 @@ contract BankExtension is IExtension, ERC165 {
         _createNewAmountCheckpoint(DaoHelper.TOTAL, token, newTotalAmount);
     }
 
-    function subtractFromBalance(
-        address,
-        address,
-        uint256
-    ) external pure {
+    function subtractFromBalance(address, address, uint256) external pure {
         revert("not implemented");
     }
 
-    function internalTransfer(
-        address,
-        address,
-        address,
-        uint256
-    ) external pure {
+    function internalTransfer(address, address, address, uint256) external pure {
         revert("not implemented");
     }
 
@@ -418,13 +352,10 @@ contract BankExtension is IExtension, ERC165 {
      * @param to The member who is receiving tokens
      * @param amount The new amount to transfer
      */
-    function internalTransfer(
-        DaoRegistry _dao,
-        address from,
-        address to,
-        address token,
-        uint256 amount
-    ) external hasExtensionAccess(_dao, AclFlag.INTERNAL_TRANSFER) {
+    function internalTransfer(DaoRegistry _dao, address from, address to, address token, uint256 amount)
+        external
+        hasExtensionAccess(_dao, AclFlag.INTERNAL_TRANSFER)
+    {
         require(dao.notJailed(from), "no transfer from jail");
         require(dao.notJailed(to), "no transfer from jail");
         uint256 newAmount = balanceOf(from, token) - amount;
@@ -440,16 +371,9 @@ contract BankExtension is IExtension, ERC165 {
      * @param tokenAddr The token where the member's balance of which will be returned
      * @return The amount in account's tokenAddr balance
      */
-    function balanceOf(address member, address tokenAddr)
-        public
-        view
-        returns (uint160)
-    {
+    function balanceOf(address member, address tokenAddr) public view returns (uint160) {
         uint32 nCheckpoints = numCheckpoints[tokenAddr][member];
-        return
-            nCheckpoints > 0
-                ? checkpoints[tokenAddr][member][nCheckpoints - 1].amount
-                : 0;
+        return nCheckpoints > 0 ? checkpoints[tokenAddr][member][nCheckpoints - 1].amount : 0;
     }
 
     /**
@@ -459,15 +383,8 @@ contract BankExtension is IExtension, ERC165 {
      * @param blockNumber The block number to get the vote balance at
      * @return The number of votes the account had as of the given block
      */
-    function getPriorAmount(
-        address account,
-        address tokenAddr,
-        uint256 blockNumber
-    ) external view returns (uint256) {
-        require(
-            blockNumber < block.number,
-            "bank::getPriorAmount: not yet determined"
-        );
+    function getPriorAmount(address account, address tokenAddr, uint256 blockNumber) external view returns (uint256) {
+        require(blockNumber < block.number, "bank::getPriorAmount: not yet determined");
 
         uint32 nCheckpoints = numCheckpoints[tokenAddr][account];
         if (nCheckpoints == 0) {
@@ -475,10 +392,7 @@ contract BankExtension is IExtension, ERC165 {
         }
 
         // First check most recent balance
-        if (
-            checkpoints[tokenAddr][account][nCheckpoints - 1].fromBlock <=
-            blockNumber
-        ) {
+        if (checkpoints[tokenAddr][account][nCheckpoints - 1].fromBlock <= blockNumber) {
             return checkpoints[tokenAddr][account][nCheckpoints - 1].amount;
         }
 
@@ -503,16 +417,8 @@ contract BankExtension is IExtension, ERC165 {
         return checkpoints[tokenAddr][account][lower].amount;
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        virtual
-        override
-        returns (bool)
-    {
-        return
-            super.supportsInterface(interfaceId) ||
-            this.withdrawTo.selector == interfaceId;
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return super.supportsInterface(interfaceId) || this.withdrawTo.selector == interfaceId;
     }
 
     /**
@@ -522,23 +428,13 @@ contract BankExtension is IExtension, ERC165 {
      * @param token The token of which the balance will be changed
      * @param amount The amount to be written into the new checkpoint
      */
-    function _createNewAmountCheckpoint(
-        address member,
-        address token,
-        uint256 amount
-    ) internal {
+    function _createNewAmountCheckpoint(address member, address token, uint256 amount) internal {
         bool isValidToken = false;
         if (availableInternalTokens[token]) {
-            require(
-                amount < type(uint88).max,
-                "token amount exceeds the maximum limit for internal tokens"
-            );
+            require(amount < type(uint88).max, "token amount exceeds the maximum limit for internal tokens");
             isValidToken = true;
         } else if (availableTokens[token]) {
-            require(
-                amount < type(uint160).max,
-                "token amount exceeds the maximum limit for external tokens"
-            );
+            require(amount < type(uint160).max, "token amount exceeds the maximum limit for external tokens");
             isValidToken = true;
         }
         uint160 newAmount = uint160(amount);
@@ -551,16 +447,11 @@ contract BankExtension is IExtension, ERC165 {
             // is when the block.number exactly matches the fromBlock value.
             // Anything different from that should generate a new checkpoint.
             //slither-disable-next-line incorrect-equality
-            nCheckpoints > 0 &&
-            checkpoints[token][member][nCheckpoints - 1].fromBlock ==
-            block.number
+            nCheckpoints > 0 && checkpoints[token][member][nCheckpoints - 1].fromBlock == block.number
         ) {
             checkpoints[token][member][nCheckpoints - 1].amount = newAmount;
         } else {
-            checkpoints[token][member][nCheckpoints] = Checkpoint(
-                uint96(block.number),
-                newAmount
-            );
+            checkpoints[token][member][nCheckpoints] = Checkpoint(uint96(block.number), newAmount);
             numCheckpoints[token][member] = nCheckpoints + 1;
         }
         //slither-disable-next-line reentrancy-events
