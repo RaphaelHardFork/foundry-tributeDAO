@@ -24,12 +24,13 @@ abstract contract Adapters is IAdapters {
     }
 
     modifier onlyMember() {
-        require(IDaoCore(_core).isMember(msg.sender), "Adapters: not a member");
+        require(IDaoCore(_core).hasRole(msg.sender, Slot.USER_EXISTS), "Adapters: not a member");
         _;
     }
 
     constructor(address core, bytes4 slot) {
         require(slot != Slot.EMPTY, "Adapters: empty slot");
+        require(core != address(0), "Adapters: zero core address");
         _core = core;
         _slot = slot;
     }

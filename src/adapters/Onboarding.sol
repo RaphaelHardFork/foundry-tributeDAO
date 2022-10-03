@@ -6,14 +6,31 @@ import "openzeppelin-contracts/token/ERC20/IERC20.sol";
 
 import "../helpers/Slot.sol";
 import "../core/IDaoCore.sol";
-import "./Adapters.sol";
+import "../guards/SlotGuard.sol";
+import "../extensions/IBank.sol";
 
-contract Onboarding is Adapters {
-    constructor(address core) Adapters(core, Slot.ONBOARDING) {}
+contract Onboarding is SlotGuard {
+    address public immutable bank;
 
-    function joinDao(uint256 deposit) external {}
+    constructor(address core, address bank_) SlotGuard(core, Slot.ONBOARDING) {
+        bank = bank_;
+    }
 
-    function processProposal(bytes32) external pure override {
-        // TO IMPLEMENT
+    function joinDao(uint256 deposit) external {
+        require(
+            !IDaoCore(_core).hasRole(msg.sender, Slot.USER_EXISTS),
+            "Onboarding: already a member"
+        );
+        IBank(bank).joiningDeposit(msg.sender, deposit);
+        IDaoCore(_core).changeMemberStatus(msg.sender, Slot.USER_EXISTS, true);
+    }
+
+    function quitDao() external {
+        require(
+            IDaoCore(_core).hasRole(msg.sender, Slot.USER_EXISTS),
+            "Onboarding: not a member"
+        );
+        IBank(bank).refundJoinDeposit(msg.sender);
+        IDaoCore(_core).changeMemberStatus(msg.sender, Slot.USER_EXISTS, false);
     }
 }

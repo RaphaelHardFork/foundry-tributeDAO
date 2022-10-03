@@ -4,14 +4,20 @@ pragma solidity ^0.8.16;
 
 import "../helpers/Slot.sol";
 import "../core/IDaoCore.sol";
-import "./Adapters.sol";
+import "../guards/SlotGuard.sol";
 
-contract Voting is Adapters {
+contract Voting is SlotGuard {
     event VoteSessionOpened(
-        bytes4 indexed slot, bytes4 indexed voteParams, bytes32 proposalId, uint64 startTime, uint64 endTime
+        bytes4 indexed slot,
+        bytes4 indexed voteParams,
+        bytes32 proposalId,
+        uint64 startTime,
+        uint64 endTime
     );
 
-    enum VoteType {UNANIMITY}
+    enum VoteType {
+        UNANIMITY
+    }
 
     struct Vote {
         uint64 startTime;
@@ -31,7 +37,7 @@ contract Voting is Adapters {
     mapping(bytes32 => mapping(address => uint256)) public votes;
     mapping(bytes4 => VoteParameter) public voteConfigs;
 
-    constructor(address core) Adapters(core, Slot.VOTING) {}
+    constructor(address core) SlotGuard(core, Slot.VOTING) {}
 
     function openVoteSession(bytes32 proposalId, bytes4 voteConfig) external {
         // ONLY ADAPTERS
@@ -46,15 +52,19 @@ contract Voting is Adapters {
         vote.startTime = startTime;
         vote.voteType = vp.voteType;
 
-        emit VoteSessionOpened(bytes4(proposalId), voteConfig, proposalId, startTime, startTime + vp.votingPeriod);
+        emit VoteSessionOpened(
+            bytes4(proposalId),
+            voteConfig,
+            proposalId,
+            startTime,
+            startTime + vp.votingPeriod
+        );
     }
 
-    function submitVote(bytes32 proposalId, uint256 vote) external {
-        // ONLY MEMBER
-        require(votes[proposalId][msg.sender] == 0, "Voting: vote already submitted");
-    }
-
-    function processProposal(bytes32) external pure override {
-        revert("Voting: not implemented");
+    function submitVote(bytes32 proposalId, uint256 vote) external onlyMember {
+        require(
+            votes[proposalId][msg.sender] == 0,
+            "Voting: vote already submitted"
+        );
     }
 }
