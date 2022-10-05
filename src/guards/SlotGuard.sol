@@ -8,7 +8,7 @@ import "./ISlotEntry.sol";
 
 abstract contract SlotGuard is ISlotEntry {
     address internal immutable _core;
-    bytes4 public immutable override slot;
+    bytes4 public immutable override slotId;
     bool public immutable override isExtension;
 
     modifier onlyCore() {
@@ -32,11 +32,11 @@ abstract contract SlotGuard is ISlotEntry {
         _;
     }
 
-    constructor(address core, bytes4 slot_) {
-        require(slot_ != Slot.EMPTY, "SlotGuard: empty slot");
+    constructor(address core, bytes4 slot) {
+        require(slot != Slot.EMPTY, "SlotGuard: empty slot");
         require(core != address(0), "SlotGuard: zero core address");
         _core = core;
-        slot = slot_;
+        slotId = slot;
         isExtension = false;
     }
 }

@@ -2,10 +2,7 @@
 
 pragma solidity ^0.8.16;
 
-import "openzeppelin-contracts/access/AccessControl.sol";
-
 import "../helpers/Slot.sol";
-import "../adapters/Adapters.sol";
 import "./IDaoCore.sol";
 import "../guards/CoreGuard.sol";
 
@@ -77,7 +74,7 @@ contract DaoCore is IDaoCore, CoreGuard {
         bool isVoteEnded = _hasVotingConsensus(proposalId);
 
         address adapterAddr = entries[bytes4(proposalId)].contractAddr;
-        IAdapters(adapterAddr).processProposal(proposalId);
+        // IAdapters(adapterAddr).processProposal(proposalId); no processing so far
     }
 
     function hasRole(address account, bytes4 role)
@@ -134,9 +131,6 @@ contract DaoCore is IDaoCore, CoreGuard {
             e.isExtension = isExtension;
         } else {
             // remove entry
-            if (!e.isExtension) {
-                IAdapters(e.contractAddr).deleteAdapter();
-            }
             delete entries[slot];
         }
 

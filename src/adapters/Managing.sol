@@ -32,7 +32,7 @@ contract Managing is SlotGuard {
         // check the contract input
         ISlotEntry entry = ISlotEntry(contractAddr);
         require(
-            entry.slot() == entrySlot && entry.isExtension() == isExt,
+            entry.slotId() == entrySlot && entry.isExtension() == isExt,
             "Managing: wrong entry setup"
         );
 
@@ -48,7 +48,7 @@ contract Managing is SlotGuard {
 
         // store in the core
         IDaoCore(_core).submitProposal(
-            bytes32(bytes.concat(slot, proposalId)),
+            bytes32(bytes.concat(slotId, proposalId)),
             msg.sender,
             votingContract
         );
@@ -58,5 +58,17 @@ contract Managing is SlotGuard {
         Proposal memory p = proposals[bytes28(proposalId << 32)];
         IDaoCore(_core).changeSlotEntry(p.slot, p.contractAddr, p.isExtension);
         delete proposals[bytes28(proposalId << 32)];
+    }
+
+    /**
+     * @notice change a slot entry without vote
+     * Should add a VETO by others admin
+     */
+    function manageSlotEntry(
+        bytes4 entrySlot,
+        bool isExt,
+        address contractAddr
+    ) external onlyAdmin {
+        IDaoCore(_core).changeSlotEntry(entrySlot, contractAddr, isExt);
     }
 }
